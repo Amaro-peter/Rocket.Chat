@@ -4,7 +4,8 @@ let debug: boolean | undefined = undefined;
 
 const isDebugEnabled = (): boolean => {
 	if (debug === undefined) {
-		debug = getConfig('debug') === 'true' || getConfig('debug-e2e') === 'true';
+		//debug = getConfig('debug') === 'true' || getConfig('debug-e2e') === 'true';
+		debug = 'false';
 	}
 
 	return debug;

@@ -4641,6 +4641,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@noble/hashes@npm:^1.7.1":
+  version: 1.7.1
+  resolution: "@noble/hashes@npm:1.7.1"
+  checksum: 10/ca3120da0c3e7881d6a481e9667465cc9ebbee1329124fb0de442e56d63fef9870f8cc96f264ebdb18096e0e36cebc0e6e979a872d545deb0a6fed9353f17e05
+  languageName: node
+  linkType: hard
+
 "@node-oauth/formats@npm:1.0.0":
   version: 1.0.0
   resolution: "@node-oauth/formats@npm:1.0.0"
@@ -8891,6 +8898,7 @@ __metadata:
     mime-db: "npm:^1.52.0"
     mime-type: "npm:^4.0.0"
     mkdirp: "npm:^1.0.4"
+    mlkem: "npm:^2.3.1"
     mocha: "npm:^9.2.2"
     moleculer: "npm:^0.14.35"
     moment: "npm:^2.30.1"
@@ -27397,6 +27405,15 @@ __metadata:
   bin:
     mkdirp: dist/cjs/src/bin.js
   checksum: 10/16fd79c28645759505914561e249b9a1f5fe3362279ad95487a4501e4467abeb714fd35b95307326b8fd03f3c7719065ef11a6f97b7285d7888306d1bd2232ba
+  languageName: node
+  linkType: hard
+
+"mlkem@npm:^2.3.1":
+  version: 2.3.1
+  resolution: "mlkem@npm:2.3.1"
+  dependencies:
+    "@noble/hashes": "npm:^1.7.1"
+  checksum: 10/362760fe4773f27991077c52f7c6b89c7d7edd8cbeb411c1d7daa45f158aa63ec0fa7fede3c434d26854adc6eadb83b88cf030f1830662ba5a60bffa9fb9a9b2
   languageName: node
   linkType: hard
 

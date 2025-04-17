@@ -18,13 +18,19 @@ import {
 	splitVectorAndEcryptedData,
 	encryptAES,
 	decryptAES,
-	generateRSAKey,
-	exportJWKKey,
-	importRSAKey,
+	//generateRSAKey,
+	//exportJWKKey,
+	//importRSAKey,
 	importRawKey,
 	deriveKey,
 	generateMnemonicPhrase,
 } from './helper';
+import {
+	importAsymmetricEncryptionKey as importRSAKey,
+	generateAsymmetricEncryptionKey as generateRSAKey,
+	exportKey_asymmetric as exportJWKKey_asymmetric,
+	setMyKeys as setMyKeys
+} from './AsymmetricEncryptionLayer';
 import { log, logError } from './logger';
 import { E2ERoom } from './rocketchat.e2e.room';
 import * as banners from '../../../client/lib/banners';
@@ -233,13 +239,16 @@ class E2E extends Emitter {
 			subs
 				.filter((sub) => sub.E2ESuggestedKey && !sub.E2EKey)
 				.map(async (sub) => {
+					console.log('##LOG## - handleAsyncE2EESuggestedKey');
 					const e2eRoom = await e2e.getInstanceByRoomId(sub.rid);
 
 					if (!e2eRoom) {
 						return;
 					}
 
-					if (sub.E2ESuggestedKey && (await e2eRoom.importGroupKey(sub.E2ESuggestedKey))) {
+					console.log('E2ESuggestedKey:', sub.E2ESuggestedKey)
+
+					if (await e2eRoom.importGroupKey(sub.E2ESuggestedKey)) {
 						this.log('Imported valid E2E suggested key');
 						await e2e.acceptSuggestedKey(sub.rid);
 						e2eRoom.keyReceived();
@@ -264,9 +273,8 @@ class E2E extends Emitter {
 			return null;
 		}
 
-		const userId = Meteor.userId();
-		if (!this.instancesByRoomId[rid] && userId) {
-			this.instancesByRoomId[rid] = new E2ERoom(userId, room);
+		if (!this.instancesByRoomId[rid]) {
+			this.instancesByRoomId[rid] = new E2ERoom(Meteor.userId(), room);
 		}
 
 		// When the key was already set and is changed via an update, we update the room instance
@@ -404,6 +412,8 @@ class E2E extends Emitter {
 			await this.persistKeys(this.getKeysFromLocalStorage(), await this.createRandomPassword());
 		}
 
+		setMyKeys(private_key, public_key);
+
 		const randomPassword = Accounts.storageLocation.getItem('e2e.randomPassword');
 		if (randomPassword) {
 			this.setState(E2EEState.SAVE_PASSWORD);
@@ -464,6 +474,14 @@ class E2E extends Emitter {
 		try {
 			this.privateKey = await importRSAKey(EJSON.parse(private_key), ['decrypt']);
 
+			console.log("##E2E## - loadKeys");
+			console.log("public_key:");
+			console.log(public_key);
+			//rsaPublicKey=EJSON.parse(public_key);
+			console.log("private_key:");
+			console.log(private_key);
+			console.log(this.privateKey);
+
 			Accounts.storageLocation.setItem('private_key', private_key);
 		} catch (error) {
 			this.setState(E2EEState.ERROR);
@@ -484,7 +502,7 @@ class E2E extends Emitter {
 		}
 
 		try {
-			const publicKey = await exportJWKKey(key.publicKey);
+			const publicKey = await exportJWKKey_asymmetric(key.publicKey);
 
 			this.publicKey = JSON.stringify(publicKey);
 			Accounts.storageLocation.setItem('public_key', JSON.stringify(publicKey));
@@ -494,7 +512,7 @@ class E2E extends Emitter {
 		}
 
 		try {
-			const privateKey = await exportJWKKey(key.privateKey);
+			const privateKey = await exportJWKKey_asymmetric(key.privateKey);
 
 			Accounts.storageLocation.setItem('private_key', JSON.stringify(privateKey));
 		} catch (error) {
@@ -520,9 +538,6 @@ class E2E extends Emitter {
 
 		const vector = crypto.getRandomValues(new Uint8Array(16));
 		try {
-			if (!masterKey) {
-				throw new Error('Error getting master key');
-			}
 			const encodedPrivateKey = await encryptAES(vector, masterKey, toArrayBuffer(privateKey));
 
 			return EJSON.stringify(joinVectorAndEcryptedData(vector, encodedPrivateKey));
@@ -615,9 +630,6 @@ class E2E extends Emitter {
 		const [vector, cipherText] = splitVectorAndEcryptedData(EJSON.parse(this.db_private_key));
 
 		try {
-			if (!masterKey) {
-				throw new Error('Error getting master key');
-			}
 			const privKey = await decryptAES(vector, masterKey, cipherText);
 			const privateKey = toString(privKey) as string;
 
@@ -645,9 +657,6 @@ class E2E extends Emitter {
 		const [vector, cipherText] = splitVectorAndEcryptedData(EJSON.parse(privateKey));
 
 		try {
-			if (!masterKey) {
-				throw new Error('Error getting master key');
-			}
 			const privKey = await decryptAES(vector, masterKey, cipherText);
 			return toString(privKey);
 		} catch (error) {
@@ -683,7 +692,7 @@ class E2E extends Emitter {
 			return message;
 		}
 
-		const decryptedMessage = (await e2eRoom.decryptMessage(message)) as IE2EEMessage;
+		const decryptedMessage: IE2EEMessage = await e2eRoom.decryptMessage(message);
 
 		const decryptedMessageWithQuote = await this.parseQuoteAttachment(decryptedMessage);
 
@@ -866,11 +875,15 @@ class E2E extends Emitter {
 				return;
 			}
 
+			console.log('##LOG## - initiateKeyDistribution-usersWaitingForE2EKeys:', usersWaitingForE2EKeys);
+
 			const userKeysWithRooms = await this.getSuggestedE2EEKeys(usersWaitingForE2EKeys);
 
 			if (!Object.keys(userKeysWithRooms).length) {
 				return;
 			}
+
+			console.log('##LOG## - initiateKeyDistribution-userKeysWithRooms:', userKeysWithRooms);
 
 			try {
 				await sdk.rest.post('/v1/e2e.provideUsersSuggestedGroupKeys', { usersSuggestedGroupKeys: userKeysWithRooms });
